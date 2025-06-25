@@ -2,6 +2,7 @@
   {
     "name": "Office Supplies",
     "sheetId": "1AbCdEfGhIjKlMnOpQrStUvWxYz1234567890",
+    "sheetName": "Inventory Data",
     "webhookUrl": "https://discord.com/api/webhooks/123456789/abcdefghijklmnop",
     "currentSuppliesCell": "B2",
     "dailyConsumptionCell": "B3"

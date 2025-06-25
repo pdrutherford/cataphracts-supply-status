@@ -56,26 +56,40 @@ class GoogleSheetsService {
     }
   }
 
-  async getCellValue(sheetId, cellAddress) {
+  async getCellValue(sheetId, cellAddress, sheetName = null) {
     await this.initialize();
 
     try {
-      // Get the second sheet's name
+      // Get sheet information
       const sheetInfo = await this.getSheetInfo(sheetId);
 
-      if (!sheetInfo.sheets || sheetInfo.sheets.length < 2) {
-        throw new Error(
-          `Spreadsheet ${sheetId} must have at least 2 sheets. Found ${
-            sheetInfo.sheets?.length || 0
-          } sheets.`
-        );
+      if (!sheetInfo.sheets || sheetInfo.sheets.length === 0) {
+        throw new Error(`Spreadsheet ${sheetId} has no sheets.`);
       }
 
-      const secondSheetName = sheetInfo.sheets[1].title;
-      const rangeWithSheet = `'${secondSheetName}'!${cellAddress}`;
+      // Determine which sheet to use
+      let targetSheet;
+      if (sheetName) {
+        // Look for the specified sheet by name
+        targetSheet = sheetInfo.sheets.find(
+          (sheet) => sheet.title === sheetName
+        );
+        if (!targetSheet) {
+          throw new Error(
+            `Sheet "${sheetName}" not found in spreadsheet ${sheetId}. Available sheets: ${sheetInfo.sheets
+              .map((s) => s.title)
+              .join(", ")}`
+          );
+        }
+      } else {
+        // Default to the first sheet if no sheet name is specified
+        targetSheet = sheetInfo.sheets[0];
+      }
+
+      const rangeWithSheet = `'${targetSheet.title}'!${cellAddress}`;
 
       logger.debug(
-        `Getting cell value from sheet ${sheetId}, second sheet "${secondSheetName}", cell ${cellAddress}`
+        `Getting cell value from sheet ${sheetId}, sheet "${targetSheet.title}", cell ${cellAddress}`
       );
 
       const response = await this.sheets.spreadsheets.values.get({
@@ -92,13 +106,13 @@ class GoogleSheetsService {
         values[0].length === 0
       ) {
         throw new Error(
-          `No data found in cell ${cellAddress} of sheet "${secondSheetName}"`
+          `No data found in cell ${cellAddress} of sheet "${targetSheet.title}"`
         );
       }
 
       const cellValue = values[0][0];
       logger.debug(
-        `Retrieved cell value from "${secondSheetName}": ${cellValue}`
+        `Retrieved cell value from "${targetSheet.title}": ${cellValue}`
       );
 
       return cellValue;
@@ -111,26 +125,40 @@ class GoogleSheetsService {
     }
   }
 
-  async updateCellValue(sheetId, cellAddress, value) {
+  async updateCellValue(sheetId, cellAddress, value, sheetName = null) {
     await this.initialize();
 
     try {
-      // Get the second sheet's name
+      // Get sheet information
       const sheetInfo = await this.getSheetInfo(sheetId);
 
-      if (!sheetInfo.sheets || sheetInfo.sheets.length < 2) {
-        throw new Error(
-          `Spreadsheet ${sheetId} must have at least 2 sheets. Found ${
-            sheetInfo.sheets?.length || 0
-          } sheets.`
-        );
+      if (!sheetInfo.sheets || sheetInfo.sheets.length === 0) {
+        throw new Error(`Spreadsheet ${sheetId} has no sheets.`);
       }
 
-      const secondSheetName = sheetInfo.sheets[1].title;
-      const rangeWithSheet = `'${secondSheetName}'!${cellAddress}`;
+      // Determine which sheet to use
+      let targetSheet;
+      if (sheetName) {
+        // Look for the specified sheet by name
+        targetSheet = sheetInfo.sheets.find(
+          (sheet) => sheet.title === sheetName
+        );
+        if (!targetSheet) {
+          throw new Error(
+            `Sheet "${sheetName}" not found in spreadsheet ${sheetId}. Available sheets: ${sheetInfo.sheets
+              .map((s) => s.title)
+              .join(", ")}`
+          );
+        }
+      } else {
+        // Default to the first sheet if no sheet name is specified
+        targetSheet = sheetInfo.sheets[0];
+      }
+
+      const rangeWithSheet = `'${targetSheet.title}'!${cellAddress}`;
 
       logger.debug(
-        `Updating cell value in sheet ${sheetId}, second sheet "${secondSheetName}", cell ${cellAddress} to value: ${value}`
+        `Updating cell value in sheet ${sheetId}, sheet "${targetSheet.title}", cell ${cellAddress} to value: ${value}`
       );
 
       const response = await this.sheets.spreadsheets.values.update({
@@ -143,7 +171,7 @@ class GoogleSheetsService {
       });
 
       logger.debug(
-        `Successfully updated cell "${cellAddress}" in sheet "${secondSheetName}" with value: ${value}`
+        `Successfully updated cell "${cellAddress}" in sheet "${targetSheet.title}" with value: ${value}`
       );
 
       return response.data;
@@ -174,6 +202,70 @@ class GoogleSheetsService {
       };
     } catch (error) {
       logger.error(`Error getting sheet info for ${sheetId}:`, error);
+      throw error;
+    }
+  }
+
+  async listSheets(sheetId) {
+    await this.initialize();
+
+    try {
+      const sheetInfo = await this.getSheetInfo(sheetId);
+      return sheetInfo.sheets;
+    } catch (error) {
+      logger.error(`Error listing sheets for ${sheetId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper method to validate and debug sheet configuration
+   * @param {string} sheetId - The Google Sheet ID
+   * @param {string} sheetName - Optional sheet name to validate
+   * @returns {Object} - Sheet information and validation results
+   */
+  async validateSheetConfig(sheetId, sheetName = null) {
+    await this.initialize();
+
+    try {
+      const sheetInfo = await this.getSheetInfo(sheetId);
+
+      const result = {
+        spreadsheetTitle: sheetInfo.title,
+        totalSheets: sheetInfo.sheets.length,
+        availableSheets: sheetInfo.sheets.map((sheet) => sheet.title),
+        targetSheet: null,
+        isValid: false,
+        message: "",
+      };
+
+      if (sheetInfo.sheets.length === 0) {
+        result.message = "Spreadsheet has no sheets";
+        return result;
+      }
+
+      if (sheetName) {
+        const targetSheet = sheetInfo.sheets.find(
+          (sheet) => sheet.title === sheetName
+        );
+        if (targetSheet) {
+          result.targetSheet = targetSheet.title;
+          result.isValid = true;
+          result.message = `Found target sheet "${sheetName}"`;
+        } else {
+          result.message = `Sheet "${sheetName}" not found. Available sheets: ${result.availableSheets.join(
+            ", "
+          )}`;
+        }
+      } else {
+        result.targetSheet = sheetInfo.sheets[0].title;
+        result.isValid = true;
+        result.message = `Using first sheet "${result.targetSheet}" (no sheetName specified)`;
+      }
+
+      return result;
+    } catch (error) {
+      logger.error(`Error validating sheet config for ${sheetId}:`, error);
       throw error;
     }
   }

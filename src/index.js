@@ -53,12 +53,14 @@ async function main() {
         // Get data from Google Sheets
         const currentSupplies = await sheetsService.getCellValue(
           sheetConfig.sheetId,
-          sheetConfig.currentSuppliesCell
+          sheetConfig.currentSuppliesCell,
+          sheetConfig.sheetName
         );
 
         const dailyConsumption = await sheetsService.getCellValue(
           sheetConfig.sheetId,
-          sheetConfig.dailyConsumptionCell
+          sheetConfig.dailyConsumptionCell,
+          sheetConfig.sheetName
         );
 
         // Calculate new supply value after daily consumption
@@ -95,7 +97,8 @@ async function main() {
           await sheetsService.updateCellValue(
             sheetConfig.sheetId,
             sheetConfig.currentSuppliesCell,
-            newSupplyValue
+            newSupplyValue,
+            sheetConfig.sheetName
           );
 
           logger.info(
