@@ -223,6 +223,49 @@ The bot sends Discord embeds with supply status:
 ]
 ```
 
+## Security & Privacy
+
+This project uses **targeted private logging** to protect sensitive supply data and tactical intelligence while maintaining full debugging capabilities.
+
+### What's Protected in Public Logs
+
+- 🔒 **Supply numbers**: Actual amounts replaced with "X"
+- 🔒 **Tactical status**: "Critically low supplies" → "Supply status updated"
+- 🔒 **Operational intelligence**: Army readiness alerts sanitized
+- 🔒 **Discord webhook URLs**: Authentication tokens hidden
+- 🔒 **Service account details**: Credentials sanitized
+
+### What's Fully Visible in Public Logs
+
+- ✅ **Sheet names**: "Processing sheet: Saraian 1st Army"
+- ✅ **Complete error messages**: Full stack traces and debugging details
+- ✅ **Operation status**: Success/failure, timing, progress
+- ✅ **Configuration issues**: Validation errors, API failures
+
+### Example Comparison
+
+**Local Development:**
+
+```
+[WARN] Saraian 1st Army supplies are critically low
+[ERROR] Saraian 3rd Army supplies have reached zero! Immediate restocking required
+[ERROR] Authentication failed for Google Sheets API
+```
+
+**GitHub Actions (Tactical Intelligence Sanitized):**
+
+```
+[WARN] Saraian 1st Army supply status updated
+[ERROR] Saraian 3rd Army supply status updated! action required
+[ERROR] Authentication failed for Google Sheets API
+```
+
+This approach protects **operational security and tactical intelligence** while maintaining **full transparency for debugging** errors and system status.
+
+**Important**: Log levels (INFO/WARN/ERROR) remain consistent between local development and public logs, preventing analysis of logging patterns to infer tactical situations.
+
+See [Private Logging Documentation](docs/PRIVATE_LOGGING.md) for complete details.
+
 ## Testing
 
 Validate configuration:

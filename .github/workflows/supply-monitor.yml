@@ -30,14 +30,14 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
           SHEETS_CONFIG: ${{ secrets.SHEETS_CONFIG }}
           LOG_LEVEL: info
-        run: npm start
+        run: |
+          echo "Starting supply status monitor..."
+          npm start
+          echo "Monitor execution completed"
 
       - name: Notify on failure
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
-            // You can customize this to send failure notifications
-            // to a Discord webhook or other notification service
             console.log('Supply status monitor failed');
-            console.log('Context:', JSON.stringify(context, null, 2));
