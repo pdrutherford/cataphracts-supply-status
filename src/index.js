@@ -34,17 +34,46 @@ async function main() {
           sheetConfig.dailyConsumptionCell
         );
 
-        // Calculate days remaining
+        // Calculate new supply value after daily consumption
+        const currentSuppliesFloat = parseFloat(currentSupplies);
+        const dailyConsumptionFloat = parseFloat(dailyConsumption);
+
+        if (isNaN(currentSuppliesFloat) || isNaN(dailyConsumptionFloat)) {
+          throw new Error("Invalid supply or consumption values - must be numbers");
+        }
+
+        if (dailyConsumptionFloat <= 0) {
+          throw new Error("Daily consumption must be greater than 0");
+        }
+
+        const newSupplyValue = Math.max(0, currentSuppliesFloat - dailyConsumptionFloat);
+        
+        logger.info(
+          `${sheetConfig.name}: Current supplies: ${currentSuppliesFloat}, Daily consumption: ${dailyConsumptionFloat}, New supply value: ${newSupplyValue}`
+        );
+
+        // Update the current supplies in the Google Sheet
+        await sheetsService.updateCellValue(
+          sheetConfig.sheetId,
+          sheetConfig.currentSuppliesCell,
+          newSupplyValue
+        );
+
+        logger.info(
+          `Updated ${sheetConfig.name} current supplies from ${currentSuppliesFloat} to ${newSupplyValue}`
+        );
+
+        // Calculate days remaining based on the new supply value
         const daysRemaining = calculateDaysRemaining(
-          currentSupplies,
-          dailyConsumption
+          newSupplyValue,
+          dailyConsumptionFloat
         );
 
         // Send Discord notification
         await discordNotifier.sendSupplyStatus({
           name: sheetConfig.name,
-          currentSupplies,
-          dailyConsumption,
+          currentSupplies: newSupplyValue,
+          dailyConsumption: dailyConsumptionFloat,
           daysRemaining,
           webhookUrl: sheetConfig.webhookUrl,
         });

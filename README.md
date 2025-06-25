@@ -5,7 +5,8 @@ A GitHub Actions cron job that monitors Google Sheets for supply levels and send
 ## Features
 
 - Monitors multiple Google Sheets with identical formats
-- Calculates remaining supply days based on current stock and daily consumption
+- **Automatically subtracts daily consumption from current supplies and updates the sheet**
+- Calculates remaining supply days based on updated stock and daily consumption
 - Sends formatted notifications to Discord webhooks
 - Runs daily via GitHub Actions
 - Uses Google Service Account for secure sheet access
@@ -17,7 +18,7 @@ A GitHub Actions cron job that monitors Google Sheets for supply levels and send
    - Create a Google Cloud Project
    - Enable Google Sheets API
    - Create a Service Account and download the JSON key
-   - Share your Google Sheets with the service account email
+   - Share your Google Sheets with the service account email (with **Editor** permissions)
 
 2. **Discord Webhook Setup**
 
@@ -57,8 +58,10 @@ A GitHub Actions cron job that monitors Google Sheets for supply levels and send
 
 ### Cell Format
 
-- **Current Supplies Cell**: Should contain a number representing current stock
+- **Current Supplies Cell**: Should contain a number representing current stock (will be automatically updated)
 - **Daily Consumption Cell**: Should contain a number representing daily usage rate
+
+**Note**: Each time the script runs, it will automatically subtract the daily consumption value from the current supplies and update the Google Sheet with the new value. This ensures your supply tracking stays current without manual intervention.
 
 ## Usage
 

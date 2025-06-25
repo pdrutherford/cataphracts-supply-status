@@ -43,7 +43,7 @@ class GoogleSheetsService {
         credentials.client_email,
         null,
         credentials.private_key,
-        ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+        ["https://www.googleapis.com/auth/spreadsheets"]
       );
 
       // Initialize the Sheets API
@@ -105,6 +105,51 @@ class GoogleSheetsService {
     } catch (error) {
       logger.error(
         `Error getting cell value from ${sheetId}:${cellAddress}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  async updateCellValue(sheetId, cellAddress, value) {
+    await this.initialize();
+
+    try {
+      // Get the second sheet's name
+      const sheetInfo = await this.getSheetInfo(sheetId);
+
+      if (!sheetInfo.sheets || sheetInfo.sheets.length < 2) {
+        throw new Error(
+          `Spreadsheet ${sheetId} must have at least 2 sheets. Found ${
+            sheetInfo.sheets?.length || 0
+          } sheets.`
+        );
+      }
+
+      const secondSheetName = sheetInfo.sheets[1].title;
+      const rangeWithSheet = `'${secondSheetName}'!${cellAddress}`;
+
+      logger.debug(
+        `Updating cell value in sheet ${sheetId}, second sheet "${secondSheetName}", cell ${cellAddress} to value: ${value}`
+      );
+
+      const response = await this.sheets.spreadsheets.values.update({
+        spreadsheetId: sheetId,
+        range: rangeWithSheet,
+        valueInputOption: "RAW",
+        requestBody: {
+          values: [[value]],
+        },
+      });
+
+      logger.debug(
+        `Successfully updated cell "${cellAddress}" in sheet "${secondSheetName}" with value: ${value}`
+      );
+
+      return response.data;
+    } catch (error) {
+      logger.error(
+        `Error updating cell value in ${sheetId}:${cellAddress}:`,
         error
       );
       throw error;
