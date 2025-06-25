@@ -1,7 +1,7 @@
 {
   "name": "supply-status-monitor",
   "version": "1.0.0",
-  "description": "A cron job to monitor Google Sheets for supply status and send Discord notifications",
+  "description": "Automated supply tracking for Cataphracts campaigns - monitors Google Sheets and sends Discord notifications",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -10,11 +10,15 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
+    "cataphracts",
+    "wargaming",
+    "discord-bot",
+    "supply-tracking",
     "google-sheets",
     "discord",
     "monitoring",
     "cron",
-    "supply-tracking"
+    "campaign-management"
   ],
   "author": "",
   "license": "MIT",

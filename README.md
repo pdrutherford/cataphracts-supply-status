@@ -1,179 +1,254 @@
-# Supply Status Monitor
+# Cataphracts Supply Status Monitor
 
-A GitHub Actions cron job that monitors Google Sheets for supply levels and sends notifications to Discord webhooks.
+Automated supply tracking for Cataphracts campaigns. Monitors Google Sheets for army supply levels and sends daily Discord notifications.
 
-## Features
+## What it does
 
-- Monitors multiple Google Sheets with identical formats
-- **Automatically subtracts daily consumption from current supplies and updates the sheet**
-- Calculates remaining supply days based on updated stock and daily consumption
-- Sends formatted notifications to Discord webhooks
-- Runs daily via GitHub Actions
-- Uses Google Service Account for secure sheet access
+- Reads current supplies and daily consumption from Google Sheets
+- Subtracts daily consumption from current supplies
+- Updates the sheet with new supply levels
+- Sends Discord alerts when supplies are low
+- Runs automatically once per day (configurable - see below)
 
 ## Setup
 
-1. **Google Service Account Setup**
+### 1. Google Cloud Setup
 
-   - Create a Google Cloud Project
-   - Enable Google Sheets API
-   - Create a Service Account and download the JSON key
-   - Share your Google Sheets with the service account email (with **Editor** permissions)
+Create a Google Cloud project (free):
 
-2. **Discord Webhook Setup**
+1. Go to [console.cloud.google.com](https://console.cloud.google.com/)
+2. Create new project
+3. Enable Google Sheets API (APIs & Services > Library)
+4. Create Service Account (APIs & Services > Credentials)
+5. Download the JSON key file
+6. Share your Google Sheets with the service account email (Editor permissions)
 
-   - Create webhooks in your Discord channels
-   - Copy the webhook URLs
+### 2. Google Sheets Format
 
-3. **Environment Variables**
-   Copy `.env.example` to `.env` and fill in your values:
+Your sheet must have these cells:
 
-   ```bash
-   cp .env.example .env
-   ```
+- **Current Supplies**: A number (e.g., cell B2: `150`)
+- **Daily Consumption**: A number (e.g., cell B3: `5`)
 
-4. **Configuration**
-   Edit `config/sheets.json` to add your sheet and webhook pairs.
+Example layout:
 
-5. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+```
+A1: Army                    B1: Saraian 1st Army
+A2: Current Supplies        B2: 150
+A3: Daily Consumption       B3: 5
+```
 
-## Configuration
+Names & position don't need to match; just so long as you provide the right locations.
 
-### sheets.json Format
+### 3. Discord Webhooks
+
+Create webhooks for notifications:
+
+**Channel webhook:**
+
+```
+https://discord.com/api/webhooks/{webhook_id}/{token}
+```
+
+**Thread webhook:**
+
+```
+https://discord.com/api/webhooks/{webhook_id}/{token}?thread_id={thread_id}
+```
+
+To create: Right-click channel > Edit Channel > Integrations > Create Webhook > Copy URL
+
+To get thread id:
+
+1. User Settings > Advanced > Enable Developer Mode
+1. Right-click thread > Copy Thread ID
+
+### 4. GitHub Repository
+
+1. Fork this repository
+2. Add these secrets (Settings > Secrets and variables > Actions):
+   - `GOOGLE_SERVICE_ACCOUNT_KEY`: Base64-encoded service account JSON
+   - `SHEETS_CONFIG`: JSON configuration (see below)
+
+### 5. Configuration
+
+Set `SHEETS_CONFIG` secret to JSON like this:
 
 ```json
 [
   {
-    "name": "Office Supplies",
-    "sheetId": "your-google-sheet-id",
-    "sheetName": "Inventory Data",
-    "webhookUrl": "your-discord-webhook-url",
+    "name": "Saraian 1st Army",
+    "sheetId": "1AbCdEfGhIjKlMnOpQrStUvWxYz1234567890",
+    "sheetName": "Supply Tracker",
+    "webhookUrl": "https://discord.com/api/webhooks/123/abc?thread_id=456",
     "currentSuppliesCell": "B2",
     "dailyConsumptionCell": "B3"
   }
 ]
 ```
 
-### Configuration Fields
+**Configuration fields:**
 
-- **name**: A descriptive name for your supply category
-- **sheetId**: The ID of your Google Spreadsheet (found in the URL)
-- **sheetName** _(optional)_: The name of the specific sheet tab to use. If not provided, the first sheet will be used
-- **webhookUrl**: Your Discord webhook URL for notifications
-- **currentSuppliesCell**: Cell reference for current stock (e.g., "B2")
-- **dailyConsumptionCell**: Cell reference for daily consumption rate (e.g., "B3")
+- `name`: Army name for notifications
+- `sheetId`: Google Sheet ID (from URL: `/d/{this-part}/edit`)
+- `sheetName`: Sheet tab name (optional, uses first tab if omitted)
+- `webhookUrl`: Discord webhook URL (with optional thread_id)
+- `currentSuppliesCell`: Cell containing current supplies (e.g., "B2")
+- `dailyConsumptionCell`: Cell containing daily consumption (e.g., "B3")
 
-### Common Use Cases
+## Timing Configuration
 
-1. **Single Sheet with One Tab**
+The system runs daily at **midnight EST** (5 AM UTC). To change this:
 
-   ```json
-   {
-     "name": "Office Supplies",
-     "sheetId": "your-sheet-id",
-     "currentSuppliesCell": "B2",
-     "dailyConsumptionCell": "B3"
-   }
-   ```
+1. Edit `.github/workflows/supply-monitor.yml`
+2. Modify the cron schedule: `- cron: "0 5 * * *"`
 
-   _No `sheetName` needed - uses the first (and only) sheet tab._
+**Cron format:** `minute hour day month weekday`
 
-2. **Multiple Tabs in Same Spreadsheet**
+- `0 5 * * *` = 5 AM UTC daily (midnight EST)
+- `0 12 * * *` = noon UTC daily
+- `0 0 * * 1` = midnight UTC every Monday
 
-   ```json
-   [
-     {
-       "name": "Q1 Office Supplies",
-       "sheetId": "your-sheet-id",
-       "sheetName": "Q1 Data",
-       "currentSuppliesCell": "B2",
-       "dailyConsumptionCell": "B3"
-     },
-     {
-       "name": "Q2 Office Supplies",
-       "sheetId": "your-sheet-id",
-       "sheetName": "Q2 Data",
-       "currentSuppliesCell": "B2",
-       "dailyConsumptionCell": "B3"
-     }
-   ]
-   ```
+**Time zones:** GitHub Actions runs in UTC. Calculate your local time offset.
 
-   _Monitor different quarters from the same spreadsheet._
+## Example Output
 
-3. **Mixed Configuration**
-   ```json
-   [
-     {
-       "name": "Kitchen Supplies",
-       "sheetId": "kitchen-sheet-id",
-       "currentSuppliesCell": "B2",
-       "dailyConsumptionCell": "B3"
-     },
-     {
-       "name": "Office Inventory",
-       "sheetId": "office-sheet-id",
-       "sheetName": "Current Inventory",
-       "currentSuppliesCell": "C5",
-       "dailyConsumptionCell": "C6"
-     }
-   ]
-   ```
-   _Mix sheets with and without specific tab names._
+The bot sends Discord embeds with supply status:
 
-### Sheet Selection
+### Normal Status (15+ days remaining)
 
-The monitor now supports flexible sheet selection:
+```
+✅ Supply Status: Saraian 1st Army
 
-- **Specific Sheet**: Set `sheetName` to target a specific sheet tab (e.g., "Inventory Data", "Q1 Supplies")
-- **First Sheet**: Omit `sheetName` to automatically use the first sheet tab
-- **Multiple Sheets**: Configure multiple entries with different `sheetName` values to monitor different tabs in the same spreadsheet
+📅 Current Day: Monday, June 25th
+📦 Current Supplies: 150
+📉 Daily Consumption: 5
+⏰ Days Remaining: 30 days
+🚨 Zero Supplies Date: Wednesday, July 25th
+```
 
-### Cell Format
+### Warning (4-7 days remaining)
 
-- **Current Supplies Cell**: Should contain a number representing current stock (will be automatically updated)
-- **Daily Consumption Cell**: Should contain a number representing daily usage rate
+```
+⚠️ **WARNING**: Saraian 1st Army supplies are running low. 5 days remaining.
 
-**Note**: Each time the script runs, it will automatically subtract the daily consumption value from the current supplies and update the Google Sheet with the new value. This ensures your supply tracking stays current without manual intervention.
+⚠️ Supply Status: Saraian 1st Army
 
-## Usage
+📅 Current Day: Monday, June 25th
+📦 Current Supplies: 25
+📉 Daily Consumption: 5
+⏰ Days Remaining: 5 days
+🚨 Zero Supplies Date: Saturday, June 30th
+```
 
-Run locally:
+### Critical (1-3 days remaining)
+
+```
+🚨 **URGENT**: Saraian 1st Army supplies are critically low! Only 2 days remaining.
+
+🚨 Supply Status: Saraian 1st Army
+
+📅 Current Day: Monday, June 25th
+📦 Current Supplies: 10
+📉 Daily Consumption: 5
+⏰ Days Remaining: 2 days
+🚨 Zero Supplies Date: Wednesday, June 27th
+```
+
+### Zero Supplies
+
+```
+🚨 **CRITICAL**: Saraian 1st Army supplies have reached ZERO today! Immediate restocking required.
+
+🚨 ZERO SUPPLIES ALERT: Saraian 1st Army
+
+📅 Current Day: Monday, June 25th
+📦 Current Supplies: 0 (OUT OF STOCK)
+📉 Daily Consumption: 5
+⏰ Days Remaining: 0 days - IMMEDIATE ACTION REQUIRED
+🚨 Status: Supplies have just been depleted today
+```
+
+## Alert Thresholds
+
+- **Green** (✅): 15+ days remaining
+- **Yellow** (⚡): 8-14 days remaining
+- **Orange** (⚠️): 4-7 days remaining
+- **Red** (🚨): 1-3 days remaining
+- **Critical** (🚨): 0 days remaining
+
+## Multiple Army Examples
+
+### Separate Sheets
+
+```json
+[
+  {
+    "name": "Saraian 1st Army",
+    "sheetId": "1AbCdEfGhIjKlMnOpQrStUvWxYz123",
+    "webhookUrl": "https://discord.com/api/webhooks/111/aaa",
+    "currentSuppliesCell": "B2",
+    "dailyConsumptionCell": "B3"
+  },
+  {
+    "name": "Keltic Raiders",
+    "sheetId": "1ZyXwVuTsRqPoNmLkJiHgFe456",
+    "webhookUrl": "https://discord.com/api/webhooks/222/bbb",
+    "currentSuppliesCell": "B2",
+    "dailyConsumptionCell": "B3"
+  }
+]
+```
+
+### Multiple Tabs, Same Sheet
+
+```json
+[
+  {
+    "name": "Saraian 1st Army",
+    "sheetId": "1AbCdEfGhIjKlMnOpQrStUvWxYz123",
+    "sheetName": "1st Army",
+    "webhookUrl": "https://discord.com/api/webhooks/111/aaa?thread_id=333",
+    "currentSuppliesCell": "B2",
+    "dailyConsumptionCell": "B3"
+  },
+  {
+    "name": "Saraian 2nd Army",
+    "sheetId": "1AbCdEfGhIjKlMnOpQrStUvWxYz123",
+    "sheetName": "2nd Army",
+    "webhookUrl": "https://discord.com/api/webhooks/111/aaa?thread_id=444",
+    "currentSuppliesCell": "B2",
+    "dailyConsumptionCell": "B3"
+  }
+]
+```
+
+## Testing
+
+Validate configuration:
+
+```bash
+npm install
+npm run validate
+```
+
+Test run (will modify sheets and send Discord messages):
 
 ```bash
 npm start
 ```
 
-Validate your sheet configurations:
+Manual GitHub Actions run: Go to Actions tab > Supply Status Monitor > Run workflow
 
-```bash
-npm run validate
-```
+## Troubleshooting
 
-The validation script will:
+**"No data found in cell"**: Check cell address format ("B2" not "b2"), verify cell contains numbers
 
-- Check if all specified sheets exist
-- Verify that target sheet tabs are accessible
-- Test reading from your configured cells
-- Display helpful debugging information
+**"Authentication failed"**: Re-encode service account JSON to Base64, check Google Sheets API is enabled
 
-The GitHub Action will run automatically once per day at UTC midnight.
+**"Discord webhook failed"**: Verify webhook URL, check if webhook was deleted
 
-## Environment Variables
-
-- `GOOGLE_SERVICE_ACCOUNT_KEY`: Base64 encoded service account JSON key
-- `SHEETS_CONFIG`: JSON string of sheet configurations (for GitHub Actions)
-
-## GitHub Actions
-
-The workflow file (`.github/workflows/supply-monitor.yml`) is configured to:
-
-- Run daily at midnight UTC
-- Use repository secrets for sensitive data
-- Send notifications on failure
+**Wrong timing**: Modify cron schedule in `.github/workflows/supply-monitor.yml`
 
 ## License
 

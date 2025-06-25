@@ -1,14 +1,14 @@
 [
   {
-    "name": "Office Supplies",
+    "name": "Saraian 1st Army",
     "sheetId": "1AbCdEfGhIjKlMnOpQrStUvWxYz1234567890",
-    "sheetName": "Inventory Data",
-    "webhookUrl": "https://discord.com/api/webhooks/123456789/abcdefghijklmnop",
+    "sheetName": "Main Army",
+    "webhookUrl": "https://discord.com/api/webhooks/123456789/abcdefghijklmnop?thread_id=111222333",
     "currentSuppliesCell": "B2",
     "dailyConsumptionCell": "B3"
   },
   {
-    "name": "Kitchen Supplies",
+    "name": "Saraian 1st Army",
     "sheetId": "1ZyXwVuTsRqPoNmLkJiHgFeDcBa0987654321",
     "webhookUrl": "https://discord.com/api/webhooks/987654321/qrstuvwxyzabcdef",
     "currentSuppliesCell": "B2",

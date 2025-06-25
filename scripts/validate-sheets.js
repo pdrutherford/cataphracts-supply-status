@@ -1,6 +1,47 @@
+// Load environment variables from .env file
+require("dotenv").config();
+
 const { GoogleSheetsService } = require("../src/services/googleSheets");
 const { loadConfig } = require("../src/utils/config");
 const { logger } = require("../src/utils/logger");
+
+/**
+ * Sleep for the specified number of milliseconds
+ * @param {number} ms - Milliseconds to sleep
+ */
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Retry a function with exponential backoff for quota errors
+ * @param {Function} fn - Function to retry
+ * @param {number} maxRetries - Maximum number of retries
+ * @param {number} baseDelay - Base delay in milliseconds
+ */
+async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
+  for (let i = 0; i <= maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const isQuotaError =
+        error.message.includes("Quota exceeded") ||
+        error.message.includes("quota metric");
+
+      if (isQuotaError && i < maxRetries) {
+        const delay = baseDelay * Math.pow(2, i);
+        logger.warn(
+          `Quota exceeded, retrying in ${delay}ms... (attempt ${i + 1}/${
+            maxRetries + 1
+          })`
+        );
+        await sleep(delay);
+        continue;
+      }
+      throw error;
+    }
+  }
+}
 
 /**
  * Validation script to check sheet configurations
@@ -17,15 +58,39 @@ async function validateSheets() {
     // Initialize Google Sheets service
     const sheetsService = new GoogleSheetsService();
 
-    // Validate each sheet configuration
-    for (const sheetConfig of config) {
-      try {
-        logger.info(`\n--- Validating: ${sheetConfig.name} ---`);
+    logger.info(`⚡ Using optimized batch processing to reduce API calls`);
+    logger.info(
+      `📊 Processing ${config.length} sheets with enhanced rate limiting`
+    );
 
-        const validation = await sheetsService.validateSheetConfig(
-          sheetConfig.sheetId,
-          sheetConfig.sheetName
+    // Validate each sheet configuration with optimized rate limiting
+    for (let i = 0; i < config.length; i++) {
+      const sheetConfig = config[i];
+
+      try {
+        logger.info(
+          `\n--- Validating: ${sheetConfig.name} (${i + 1}/${
+            config.length
+          }) ---`
         );
+
+        // Add delay between requests to avoid hitting rate limits
+        // Increased delay for better quota management
+        if (i > 0) {
+          logger.info("⏱️  Waiting 5 seconds to avoid rate limits...");
+          await sleep(5000);
+        }
+
+        const validation = await retryWithBackoff(
+          async () => {
+            return await sheetsService.validateSheetConfig(
+              sheetConfig.sheetId,
+              sheetConfig.sheetName
+            );
+          },
+          4,
+          2000
+        ); // Increased retries and base delay
 
         logger.info(`Spreadsheet: "${validation.spreadsheetTitle}"`);
         logger.info(`Total sheets: ${validation.totalSheets}`);
@@ -39,27 +104,40 @@ async function validateSheets() {
         logger.info(`Message: ${validation.message}`);
 
         if (validation.isValid) {
-          // Test reading the specified cells
+          // Test reading the specified cells using batch API to reduce calls
           try {
-            const currentSupplies = await sheetsService.getCellValue(
-              sheetConfig.sheetId,
-              sheetConfig.currentSuppliesCell,
-              sheetConfig.sheetName
-            );
+            logger.info("📖 Reading cell values using batch API...");
 
-            const dailyConsumption = await sheetsService.getCellValue(
-              sheetConfig.sheetId,
-              sheetConfig.dailyConsumptionCell,
-              sheetConfig.sheetName
-            );
+            const cellValues = await retryWithBackoff(
+              async () => {
+                return await sheetsService.getCellValuesBatch(
+                  sheetConfig.sheetId,
+                  [
+                    sheetConfig.currentSuppliesCell,
+                    sheetConfig.dailyConsumptionCell,
+                  ],
+                  sheetConfig.sheetName
+                );
+              },
+              4,
+              2000
+            ); // Increased retries and base delay
+
+            const currentSupplies = cellValues[sheetConfig.currentSuppliesCell];
+            const dailyConsumption =
+              cellValues[sheetConfig.dailyConsumptionCell];
 
             logger.info(
-              `Current supplies (${sheetConfig.currentSuppliesCell}): ${currentSupplies}`
+              `Current supplies (${sheetConfig.currentSuppliesCell}): ${
+                currentSupplies || "No data"
+              }`
             );
             logger.info(
-              `Daily consumption (${sheetConfig.dailyConsumptionCell}): ${dailyConsumption}`
+              `Daily consumption (${sheetConfig.dailyConsumptionCell}): ${
+                dailyConsumption || "No data"
+              }`
             );
-            logger.info(`✅ Cell data retrieved successfully`);
+            logger.info(`✅ Cell data retrieved successfully using batch API`);
           } catch (cellError) {
             logger.error(`❌ Error reading cells: ${cellError.message}`);
           }

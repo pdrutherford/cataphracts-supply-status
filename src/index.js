@@ -33,6 +33,14 @@ function parseNumericValue(value) {
   return parsed;
 }
 
+/**
+ * Sleep for the specified number of milliseconds
+ * @param {number} ms - Milliseconds to sleep
+ */
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function main() {
   try {
     logger.info("Starting supply status monitor...");
@@ -45,23 +53,41 @@ async function main() {
     const sheetsService = new GoogleSheetsService();
     const discordNotifier = new DiscordNotifier();
 
-    // Process each sheet configuration
-    for (const sheetConfig of config) {
+    // Process each sheet configuration with rate limiting
+    for (let i = 0; i < config.length; i++) {
+      const sheetConfig = config[i];
+
+      // Add delay between sheets to avoid quota limits
+      if (i > 0) {
+        logger.info(
+          "⏱️  Waiting 3 seconds between sheets to avoid rate limits..."
+        );
+        await sleep(3000);
+      }
       try {
         logger.info(`Processing sheet: ${sheetConfig.name}`);
 
-        // Get data from Google Sheets
-        const currentSupplies = await sheetsService.getCellValue(
+        // Get data from Google Sheets using batch API to reduce quota usage
+        const cellValues = await sheetsService.getCellValuesBatch(
           sheetConfig.sheetId,
-          sheetConfig.currentSuppliesCell,
+          [sheetConfig.currentSuppliesCell, sheetConfig.dailyConsumptionCell],
           sheetConfig.sheetName
         );
 
-        const dailyConsumption = await sheetsService.getCellValue(
-          sheetConfig.sheetId,
-          sheetConfig.dailyConsumptionCell,
-          sheetConfig.sheetName
-        );
+        const currentSupplies = cellValues[sheetConfig.currentSuppliesCell];
+        const dailyConsumption = cellValues[sheetConfig.dailyConsumptionCell];
+
+        // Validate that we got values
+        if (currentSupplies === null || currentSupplies === undefined) {
+          throw new Error(
+            `No data found in current supplies cell ${sheetConfig.currentSuppliesCell}`
+          );
+        }
+        if (dailyConsumption === null || dailyConsumption === undefined) {
+          throw new Error(
+            `No data found in daily consumption cell ${sheetConfig.dailyConsumptionCell}`
+          );
+        }
 
         // Calculate new supply value after daily consumption
         const currentSuppliesFloat = parseNumericValue(currentSupplies);
@@ -159,6 +185,9 @@ async function main() {
           logger.error("Failed to send error notification:", notifyError);
         }
       }
+
+      // Sleep to avoid hitting rate limits
+      await sleep(2000); // Sleep for 2 seconds (2000 milliseconds)
     }
 
     logger.info("Supply status monitor completed successfully");

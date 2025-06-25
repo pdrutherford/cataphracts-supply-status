@@ -269,6 +269,88 @@ class GoogleSheetsService {
       throw error;
     }
   }
+
+  /**
+   * Get multiple cell values in a single API call to reduce quota usage
+   * @param {string} sheetId - The Google Sheet ID
+   * @param {string[]} cellAddresses - Array of cell addresses (e.g., ['E5', 'G5'])
+   * @param {string} sheetName - Optional sheet name
+   * @returns {Object} - Object with cell addresses as keys and values as values
+   */
+  async getCellValuesBatch(sheetId, cellAddresses, sheetName = null) {
+    await this.initialize();
+
+    try {
+      // Get sheet information
+      const sheetInfo = await this.getSheetInfo(sheetId);
+
+      if (!sheetInfo.sheets || sheetInfo.sheets.length === 0) {
+        throw new Error(`Spreadsheet ${sheetId} has no sheets.`);
+      }
+
+      // Determine which sheet to use
+      let targetSheet;
+      if (sheetName) {
+        targetSheet = sheetInfo.sheets.find(
+          (sheet) => sheet.title === sheetName
+        );
+        if (!targetSheet) {
+          throw new Error(
+            `Sheet "${sheetName}" not found in spreadsheet ${sheetId}. Available sheets: ${sheetInfo.sheets
+              .map((s) => s.title)
+              .join(", ")}`
+          );
+        }
+      } else {
+        targetSheet = sheetInfo.sheets[0];
+      }
+
+      // Create ranges for batch request
+      const ranges = cellAddresses.map(
+        (cellAddress) => `'${targetSheet.title}'!${cellAddress}`
+      );
+
+      logger.debug(
+        `Getting cell values in batch from sheet ${sheetId}, sheet "${
+          targetSheet.title
+        }", cells: ${cellAddresses.join(", ")}`
+      );
+
+      const response = await this.sheets.spreadsheets.values.batchGet({
+        spreadsheetId: sheetId,
+        ranges: ranges,
+      });
+
+      const result = {};
+      response.data.valueRanges.forEach((valueRange, index) => {
+        const cellAddress = cellAddresses[index];
+        const values = valueRange.values;
+
+        if (values && values.length > 0 && values[0] && values[0].length > 0) {
+          result[cellAddress] = values[0][0];
+        } else {
+          result[cellAddress] = null;
+        }
+      });
+
+      logger.debug(
+        `Retrieved batch cell values from "${
+          targetSheet.title
+        }": ${JSON.stringify(result)}`
+      );
+
+      return result;
+    } catch (error) {
+      logger.error(
+        `Error getting batch cell values from ${sheetId}:${cellAddresses.join(
+          ","
+        )}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
 }
 
 module.exports = { GoogleSheetsService };
