@@ -39,15 +39,20 @@ async function main() {
         const dailyConsumptionFloat = parseFloat(dailyConsumption);
 
         if (isNaN(currentSuppliesFloat) || isNaN(dailyConsumptionFloat)) {
-          throw new Error("Invalid supply or consumption values - must be numbers");
+          throw new Error(
+            "Invalid supply or consumption values - must be numbers"
+          );
         }
 
         if (dailyConsumptionFloat <= 0) {
           throw new Error("Daily consumption must be greater than 0");
         }
 
-        const newSupplyValue = Math.max(0, currentSuppliesFloat - dailyConsumptionFloat);
-        
+        const newSupplyValue = Math.max(
+          0,
+          currentSuppliesFloat - dailyConsumptionFloat
+        );
+
         logger.info(
           `${sheetConfig.name}: Current supplies: ${currentSuppliesFloat}, Daily consumption: ${dailyConsumptionFloat}, New supply value: ${newSupplyValue}`
         );
