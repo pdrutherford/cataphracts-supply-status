@@ -13,17 +13,20 @@ A GitHub Actions cron job that monitors Google Sheets for supply levels and send
 ## Setup
 
 1. **Google Service Account Setup**
+
    - Create a Google Cloud Project
    - Enable Google Sheets API
    - Create a Service Account and download the JSON key
    - Share your Google Sheets with the service account email
 
 2. **Discord Webhook Setup**
+
    - Create webhooks in your Discord channels
    - Copy the webhook URLs
 
 3. **Environment Variables**
    Copy `.env.example` to `.env` and fill in your values:
+
    ```bash
    cp .env.example .env
    ```
@@ -39,6 +42,7 @@ A GitHub Actions cron job that monitors Google Sheets for supply levels and send
 ## Configuration
 
 ### sheets.json Format
+
 ```json
 [
   {
@@ -52,12 +56,14 @@ A GitHub Actions cron job that monitors Google Sheets for supply levels and send
 ```
 
 ### Cell Format
+
 - **Current Supplies Cell**: Should contain a number representing current stock
 - **Daily Consumption Cell**: Should contain a number representing daily usage rate
 
 ## Usage
 
 Run locally:
+
 ```bash
 npm start
 ```
@@ -72,6 +78,7 @@ The GitHub Action will run automatically once per day at UTC midnight.
 ## GitHub Actions
 
 The workflow file (`.github/workflows/supply-monitor.yml`) is configured to:
+
 - Run daily at midnight UTC
 - Use repository secrets for sensitive data
 - Send notifications on failure
