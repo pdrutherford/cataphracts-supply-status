@@ -1,7 +1,24 @@
 const https = require("https");
 const { logger } = require("../utils/logger");
+const { format } = require("date-fns");
+const { formatInTimeZone } = require("date-fns-tz");
 
 class DiscordNotifier {
+  // Get current day in New York timezone
+  getCurrentDayNY() {
+    const now = new Date();
+    return formatInTimeZone(now, "America/New_York", "EEEE, MMMM do");
+  }
+
+  // Calculate the date when supplies will reach zero
+  getZeroSuppliesDate(daysRemaining) {
+    const now = new Date();
+    const zeroDate = new Date(
+      now.getTime() + daysRemaining * 24 * 60 * 60 * 1000
+    );
+    return formatInTimeZone(zeroDate, "America/New_York", "EEEE, MMMM do");
+  }
+
   async sendSupplyStatus({
     name,
     currentSupplies,
@@ -17,6 +34,11 @@ class DiscordNotifier {
       color: color,
       fields: [
         {
+          name: "📅 Current Day",
+          value: this.getCurrentDayNY(),
+          inline: false,
+        },
+        {
           name: "📦 Current Supplies",
           value: `${currentSupplies}`,
           inline: true,
@@ -31,12 +53,12 @@ class DiscordNotifier {
           value: `${daysRemaining} days`,
           inline: true,
         },
+        {
+          name: "🚨 Zero Supplies Date",
+          value: this.getZeroSuppliesDate(daysRemaining),
+          inline: false,
+        },
       ],
-      footer: {
-        text: `Supply Status Monitor • ${
-          new Date().toISOString().split("T")[0]
-        }`,
-      },
       timestamp: new Date().toISOString(),
     };
 
@@ -71,11 +93,6 @@ class DiscordNotifier {
           inline: false,
         },
       ],
-      footer: {
-        text: `Supply Status Monitor • ${
-          new Date().toISOString().split("T")[0]
-        }`,
-      },
       timestamp: new Date().toISOString(),
     };
 

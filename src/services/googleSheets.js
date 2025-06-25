@@ -1,4 +1,6 @@
 const { google } = require("googleapis");
+const path = require("path");
+const fs = require("fs");
 const { logger } = require("../utils/logger");
 
 class GoogleSheetsService {
@@ -25,7 +27,11 @@ class GoogleSheetsService {
         credentials = JSON.parse(keyBuffer.toString("utf8"));
       } else if (process.env.GOOGLE_SERVICE_ACCOUNT_PATH) {
         // For local development - load from file
-        credentials = require(process.env.GOOGLE_SERVICE_ACCOUNT_PATH);
+        const serviceAccountPath = path.resolve(
+          process.env.GOOGLE_SERVICE_ACCOUNT_PATH
+        );
+        const serviceAccountJson = fs.readFileSync(serviceAccountPath, "utf8");
+        credentials = JSON.parse(serviceAccountJson);
       } else {
         throw new Error(
           "No Google Service Account credentials found. Set GOOGLE_SERVICE_ACCOUNT_KEY or GOOGLE_SERVICE_ACCOUNT_PATH"
@@ -54,13 +60,27 @@ class GoogleSheetsService {
     await this.initialize();
 
     try {
+      // Get the second sheet's name
+      const sheetInfo = await this.getSheetInfo(sheetId);
+
+      if (!sheetInfo.sheets || sheetInfo.sheets.length < 2) {
+        throw new Error(
+          `Spreadsheet ${sheetId} must have at least 2 sheets. Found ${
+            sheetInfo.sheets?.length || 0
+          } sheets.`
+        );
+      }
+
+      const secondSheetName = sheetInfo.sheets[1].title;
+      const rangeWithSheet = `'${secondSheetName}'!${cellAddress}`;
+
       logger.debug(
-        `Getting cell value from sheet ${sheetId}, cell ${cellAddress}`
+        `Getting cell value from sheet ${sheetId}, second sheet "${secondSheetName}", cell ${cellAddress}`
       );
 
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: sheetId,
-        range: cellAddress,
+        range: rangeWithSheet,
       });
 
       const values = response.data.values;
@@ -71,11 +91,15 @@ class GoogleSheetsService {
         !values[0] ||
         values[0].length === 0
       ) {
-        throw new Error(`No data found in cell ${cellAddress}`);
+        throw new Error(
+          `No data found in cell ${cellAddress} of sheet "${secondSheetName}"`
+        );
       }
 
       const cellValue = values[0][0];
-      logger.debug(`Retrieved cell value: ${cellValue}`);
+      logger.debug(
+        `Retrieved cell value from "${secondSheetName}": ${cellValue}`
+      );
 
       return cellValue;
     } catch (error) {

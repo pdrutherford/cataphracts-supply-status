@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+require("dotenv").config();
+
 const { GoogleSheetsService } = require("./services/googleSheets");
 const { DiscordNotifier } = require("./services/discord");
 const { loadConfig } = require("./utils/config");

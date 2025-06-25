@@ -18,9 +18,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "googleapis": "^128.0.0",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "discord.js": "^14.14.1",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "googleapis": "^128.0.0"
   },
   "devDependencies": {
     "eslint": "^8.56.0"
