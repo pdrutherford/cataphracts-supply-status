@@ -2,8 +2,8 @@ name: Supply Status Monitor
 
 on:
   schedule:
-    # Run daily at midnight UTC
-    - cron: "0 0 * * *"
+    # Run daily at midnight EST (1 AM EDT)
+    - cron: "0 5 * * *"
 
   # Allow manual triggering
   workflow_dispatch:

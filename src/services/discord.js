@@ -105,8 +105,64 @@ class DiscordNotifier {
     logger.info(`Sent error notification for ${sheetName}`);
   }
 
+  async sendZeroSupplies({
+    name,
+    suppliesWereAlreadyZero,
+    dailyConsumption,
+    webhookUrl,
+  }) {
+    const embed = {
+      title: `🚨 ZERO SUPPLIES ALERT: ${name}`,
+      color: 0x8b0000, // Dark red for critical situation
+      fields: [
+        {
+          name: "📅 Current Day",
+          value: this.getCurrentDayNY(),
+          inline: false,
+        },
+        {
+          name: "📦 Current Supplies",
+          value: "**0** (OUT OF STOCK)",
+          inline: true,
+        },
+        {
+          name: "📉 Daily Consumption",
+          value: `${dailyConsumption}`,
+          inline: true,
+        },
+        {
+          name: "⏰ Days Remaining",
+          value: "**0 days** - IMMEDIATE ACTION REQUIRED",
+          inline: false,
+        },
+        {
+          name: "🚨 Status",
+          value: suppliesWereAlreadyZero
+            ? "Supplies were already depleted"
+            : "Supplies have just been depleted today",
+          inline: false,
+        },
+      ],
+      timestamp: new Date().toISOString(),
+    };
+
+    const urgentMessage = suppliesWereAlreadyZero
+      ? `🚨 **CRITICAL**: ${name} supplies are STILL at ZERO! No supplies available for consumption.`
+      : `🚨 **CRITICAL**: ${name} supplies have reached ZERO today! Immediate restocking required.`;
+
+    const payload = {
+      content: urgentMessage,
+      embeds: [embed],
+    };
+
+    await this.sendWebhook(webhookUrl, payload);
+    logger.info(`Sent zero supplies alert for ${name}`);
+  }
+
   getStatusColor(daysRemaining) {
-    if (daysRemaining <= 3) {
+    if (daysRemaining === 0) {
+      return 0x8b0000; // Dark red - Zero supplies
+    } else if (daysRemaining <= 3) {
       return 0xff0000; // Red - Critical
     } else if (daysRemaining <= 7) {
       return 0xff8c00; // Orange - Warning
@@ -118,7 +174,9 @@ class DiscordNotifier {
   }
 
   getStatusEmoji(daysRemaining) {
-    if (daysRemaining <= 3) {
+    if (daysRemaining === 0) {
+      return "🚨";
+    } else if (daysRemaining <= 3) {
       return "🚨";
     } else if (daysRemaining <= 7) {
       return "⚠️";
