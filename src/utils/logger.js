@@ -51,6 +51,10 @@ class Logger {
       /\b\d+\s*(days?\s*)?(left|remaining)\b/i,
       /\bsupplies?\s*:\s*\d+/i,
       /\bconsumption\s*:\s*\d+/i,
+      // Multi-number supply status patterns
+      /Current supplies:\s*\d+.*Daily consumption:\s*\d+.*New supply value:\s*\d+/i,
+      /Updated.*current supplies from\s*\d+\s*to\s*\d+/i,
+      /Successfully processed.*:\s*\d+\s*days?\s*remaining/i,
       // Discord webhook URLs (contain tokens)
       /https:\/\/discord\.com\/api\/webhooks\/\d+\/[a-zA-Z0-9_-]+/,
       // Google service account emails
@@ -152,6 +156,30 @@ class Logger {
     sanitized = sanitized.replace(
       /\bconsumption\s*:\s*\d+/gi,
       "consumption: X"
+    );
+
+    // Replace supply status patterns with multiple numbers
+    sanitized = sanitized.replace(
+      /Current supplies:\s*\d+,\s*Daily consumption:\s*\d+,\s*New supply value:\s*\d+/gi,
+      "Current supplies: X, Daily consumption: X, New supply value: X"
+    );
+    
+    // Also catch any remaining "New supply value" patterns
+    sanitized = sanitized.replace(
+      /New supply value:\s*\d+/gi,
+      "New supply value: X"
+    );
+
+    // Replace "Updated X current supplies from Y to Z" pattern
+    sanitized = sanitized.replace(
+      /Updated\s+(.+?)\s+current supplies from\s+\d+\s+to\s+\d+/gi,
+      "Updated $1 current supplies from X to X"
+    );
+
+    // Replace "Successfully processed X: Y days remaining" pattern
+    sanitized = sanitized.replace(
+      /Successfully processed\s+([^:]+):\s*\d+\s*days?\s*remaining/gi,
+      "Successfully processed $1: X days remaining"
     );
 
     // Replace Discord webhook URLs but keep the fact that it's a webhook
