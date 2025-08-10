@@ -11,21 +11,43 @@ on:
 jobs:
   monitor-supplies:
     runs-on: ubuntu-latest
+    env:
+      TZ: America/New_York # Ensure date checks use Eastern Time
 
     steps:
+      - name: Check pause window (Aug 11-17 2025)
+        id: pause-check
+        run: |
+          today=$(date +%Y-%m-%d)
+          echo "Today is $today (TZ=$TZ)"
+          case "$today" in
+            2025-08-11|2025-08-12|2025-08-13|2025-08-14|2025-08-15|2025-08-16|2025-08-17)
+              echo "Within pause window (Aug 11-17, 2025). Skipping remaining steps.";
+              echo "skip=true" >> $GITHUB_OUTPUT;
+              ;;
+            *)
+              echo "Outside pause window. Running monitor.";
+              echo "skip=false" >> $GITHUB_OUTPUT;
+              ;;
+          esac
+
       - name: Checkout repository
+        if: steps.pause-check.outputs.skip != 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        if: steps.pause-check.outputs.skip != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "18"
           cache: "npm"
 
       - name: Install dependencies
+        if: steps.pause-check.outputs.skip != 'true'
         run: npm ci
 
       - name: Run supply status monitor
+        if: steps.pause-check.outputs.skip != 'true'
         env:
           GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
           SHEETS_CONFIG: ${{ secrets.SHEETS_CONFIG }}
@@ -36,7 +58,7 @@ jobs:
           echo "Monitor execution completed"
 
       - name: Notify on failure
-        if: failure()
+        if: steps.pause-check.outputs.skip != 'true' && failure()
         uses: actions/github-script@v7
         with:
           script: |
