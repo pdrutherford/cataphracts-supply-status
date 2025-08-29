@@ -143,6 +143,7 @@ async function main() {
             suppliesWereAlreadyZero: suppliesWereZero,
             dailyConsumption: dailyConsumptionFloat,
             webhookUrl: sheetConfig.webhookUrl,
+            sheetId: sheetConfig.sheetId,
           });
         } else {
           // Calculate days remaining based on the new supply value
@@ -158,6 +159,7 @@ async function main() {
             dailyConsumption: dailyConsumptionFloat,
             daysRemaining,
             webhookUrl: sheetConfig.webhookUrl,
+            sheetId: sheetConfig.sheetId,
           });
         }
 

@@ -25,40 +25,23 @@ class DiscordNotifier {
     dailyConsumption,
     daysRemaining,
     webhookUrl,
+    sheetId,
   }) {
     const color = this.getStatusColor(daysRemaining);
     const statusEmoji = this.getStatusEmoji(daysRemaining);
+    const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}`;
+
+    // Format the concise message with clickable hyperlink
+    const description = [
+      `⚡ **Status:** ${name}`,
+      `📅 ${this.getCurrentDayNY()} • [Open Sheet](${spreadsheetUrl})`,
+      `📦 **Supplies** ${currentSupplies} • 📉 **Cons** ${dailyConsumption}/d • ⏰ **Days** ${daysRemaining}`,
+      `🚨 **Zero Date** ${this.getZeroSuppliesDate(daysRemaining)}`,
+    ].join("\n");
 
     const embed = {
-      title: `${statusEmoji} Supply Status: ${name}`,
+      description: description,
       color: color,
-      fields: [
-        {
-          name: "📅 Current Day",
-          value: this.getCurrentDayNY(),
-          inline: false,
-        },
-        {
-          name: "📦 Current Supplies",
-          value: `${currentSupplies}`,
-          inline: true,
-        },
-        {
-          name: "📉 Daily Consumption",
-          value: `${dailyConsumption}`,
-          inline: true,
-        },
-        {
-          name: "⏰ Days Remaining",
-          value: `${daysRemaining} days`,
-          inline: true,
-        },
-        {
-          name: "🚨 Zero Supplies Date",
-          value: this.getZeroSuppliesDate(daysRemaining),
-          inline: false,
-        },
-      ],
       timestamp: new Date().toISOString(),
     };
 
@@ -110,39 +93,28 @@ class DiscordNotifier {
     suppliesWereAlreadyZero,
     dailyConsumption,
     webhookUrl,
+    sheetId,
   }) {
+    const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}`;
+
+    // Format the concise message with clickable hyperlink for zero supplies
+    const description = [
+      `⚡ **Status:** ${name}`,
+      `📅 ${this.getCurrentDayNY()} • [Open Sheet](${spreadsheetUrl})`,
+      `📦 **Supplies** 0 (OUT OF STOCK) • 📉 **Cons** ${dailyConsumption}/d • ⏰ **Days** 0`,
+      `🚨 **Zero Date** TODAY - IMMEDIATE ACTION REQUIRED`,
+      ``,
+      `**${
+        suppliesWereAlreadyZero
+          ? "Supplies were already depleted"
+          : "Supplies have just been depleted today"
+      }**`,
+    ].join("\n");
+
     const embed = {
       title: `🚨 ZERO SUPPLIES ALERT: ${name}`,
+      description: description,
       color: 0x8b0000, // Dark red for critical situation
-      fields: [
-        {
-          name: "📅 Current Day",
-          value: this.getCurrentDayNY(),
-          inline: false,
-        },
-        {
-          name: "📦 Current Supplies",
-          value: "**0** (OUT OF STOCK)",
-          inline: true,
-        },
-        {
-          name: "📉 Daily Consumption",
-          value: `${dailyConsumption}`,
-          inline: true,
-        },
-        {
-          name: "⏰ Days Remaining",
-          value: "**0 days** - IMMEDIATE ACTION REQUIRED",
-          inline: false,
-        },
-        {
-          name: "🚨 Status",
-          value: suppliesWereAlreadyZero
-            ? "Supplies were already depleted"
-            : "Supplies have just been depleted today",
-          inline: false,
-        },
-      ],
       timestamp: new Date().toISOString(),
     };
 
